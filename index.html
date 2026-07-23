@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fara Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+        * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #f2f2f2; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+
+        .login-container { width: 100%; max-width: 400px; padding: 20px; }
+        .login-card {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 32px 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e8ecf1;
+        }
+
+        .logo { text-align: center; margin-bottom: 28px; }
+        .logo h1 { font-size: 22px; font-weight: 700; }
+        .logo h1 span:first-child { color: #0028B3; }
+        .logo h1 span:last-child { color: #1a2236; }
+        .logo p { font-size: 13px; color: #6a7fa8; margin-top: 2px; }
+
+        .input-group { margin-bottom: 14px; }
+        .input-group label { display: block; font-size: 12px; font-weight: 600; color: #1a2236; margin-bottom: 4px; }
+        .input-field {
+            width: 100%; padding: 12px 14px;
+            border: 1.5px solid #d6e0f5;
+            border-radius: 12px;
+            font-size: 14px;
+            transition: border 0.2s;
+            background: #f8fafd;
+            outline: none;
+        }
+        .input-field:focus { border-color: #0028B3; background: #fff; }
+
+        .btn-primary {
+            width: 100%; padding: 13px;
+            background: #0028B3;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 6px;
+        }
+        .btn-primary:hover { background: #1557b0; }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .error-message { color: #dc2626; font-size: 12px; text-align: center; min-height: 18px; margin-top: 6px; }
+
+        .footer-text { text-align: center; font-size: 11px; color: #a0aec0; margin-top: 18px; }
+
+        .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 8px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <div class="login-card">
+        <!-- Logo MySaku style -->
+        <div class="logo">
+            <h1><span>My</span><span>Saku</span></h1>
+            <p>💕 Fara Chat</p>
+        </div>
+
+        <!-- Form -->
+        <div class="input-group">
+            <label>Nama</label>
+            <input type="text" id="loginName" class="input-field" placeholder="Fajar / Rani" />
+        </div>
+        <div class="input-group">
+            <label>Kode</label>
+            <input type="password" id="loginCode" class="input-field" placeholder="Masukkan kode rahasia" />
+        </div>
+
+        <div class="error-message" id="loginError"></div>
+        <button class="btn-primary" id="loginBtn">Masuk</button>
+
+        <div class="footer-text">🔒 Hanya untuk Fajar & Rani</div>
+    </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+    apiKey: 'AIzaSyBvsdvBHxViIxObWEY7ssUXdPHEuLz3b-o',
+    authDomain: 'fara-2e838.firebaseapp.com',
+    databaseURL: 'https://fara-2e838-default-rtdb.asia-southeast1.firebasedatabase.app',
+    projectId: 'fara-2e838',
+    storageBucket: 'fara-2e838.firebasestorage.app',
+    messagingSenderId: '312061013821',
+    appId: '1:312061013821:web:fdf6d8c9559757ee181f54'
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const COUPLE_CODE = 'LOVE_FAJAR_RANI';
+const VALID_USERS = ['fajar', 'rani'];
+
+const loginBtn = document.getElementById('loginBtn');
+const loginError = document.getElementById('loginError');
+const loginName = document.getElementById('loginName');
+const loginCode = document.getElementById('loginCode');
+
+loginBtn.addEventListener('click', async function() {
+    const name = loginName.value.trim().toLowerCase();
+    const code = loginCode.value.trim().toUpperCase();
+
+    if (!name || !code) { loginError.textContent = 'Isi semua data!'; return; }
+    if (!VALID_USERS.includes(name)) { loginError.textContent = 'Nama harus Fajar atau Rani!'; return; }
+    if (code !== COUPLE_CODE) { loginError.textContent = 'Kode salah!'; return; }
+
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner"></span> Memproses...';
+    loginError.textContent = '';
+
+    try {
+        const userRef = db.collection('users').doc(name);
+        const snap = await userRef.get();
+
+        if (!snap.exists) {
+            await userRef.set({
+                id: name,
+                name: name === 'fajar' ? 'Fajar' : 'Rani',
+                isOnline: true,
+                lastSeen: new Date().toISOString(),
+                fcmToken: ''
+            });
+        } else {
+            await userRef.update({ isOnline: true, lastSeen: new Date().toISOString() });
+        }
+
+        localStorage.setItem('fara_userId', name);
+        localStorage.setItem('fara_name', name === 'fajar' ? 'Fajar' : 'Rani');
+        window.location.href = 'chat.html';
+
+    } catch (error) {
+        loginError.textContent = 'Error: ' + error.message;
+        this.disabled = false;
+        this.innerHTML = 'Masuk';
+    }
+});
+
+document.querySelectorAll('#loginName, #loginCode').forEach(input => {
+    input.addEventListener('keypress', e => { if (e.key === 'Enter') loginBtn.click(); });
+});
+
+const userId = localStorage.getItem('fara_userId');
+if (userId && window.location.pathname.includes('index.html')) {
+    window.location.href = 'chat.html';
+}
+</script>
+
+</body>
+</html>
