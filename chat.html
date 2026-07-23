@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>💕 Fara Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <style>
+        /* ... sama seperti sebelumnya ... */
+        * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #f2f2f2; display: flex; justify-content: center; align-items: center; height: 100dvh; overflow: hidden; }
+        .chat-container { width: 100%; max-width: 400px; height: 100dvh; background: #ffffff; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+        .header { position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 400px; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; background: #fff; border-bottom: 1px solid #f0f0f0; z-index: 30; height: 60px; }
+        .header .logo { font-weight: 700; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+        .header .logo span:first-child { color: #DB2777; }
+        .header .logo span:last-child { color: #1a2236; }
+        .header-user { font-size: 13px; color: #6a7fa8; }
+        .header-actions { display: flex; align-items: center; gap: 12px; }
+        .header-actions .material-symbols-outlined { color: #6a7fa8; cursor: pointer; font-size: 24px; }
+        .header-actions .material-symbols-outlined:hover { color: #DB2777; }
+        .partner-status { font-size: 11px; font-weight: 600; }
+        .partner-status.online { color: #22c55e; }
+        .partner-status.offline { color: #6a7fa8; }
+        .chat-area { flex: 1; padding: 16px; padding-top: 76px; padding-bottom: 100px; overflow-y: auto; background: #ffffff; display: flex; flex-direction: column; gap: 10px; }
+        .chat-area::-webkit-scrollbar { width: 4px; }
+        .chat-area::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+        .message-row { display: flex; width: 100%; animation: fadeIn 0.3s ease; }
+        .message-row.user { justify-content: flex-end; }
+        .message-row.other { justify-content: flex-start; }
+        .message-row.system { justify-content: center; }
+        .message-wrapper { max-width: 85%; display: flex; flex-direction: column; }
+        .message-row.user .message-wrapper { align-items: flex-end; }
+        .message-row.other .message-wrapper { align-items: flex-start; }
+        .bubble { padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.5; word-wrap: break-word; }
+        .bubble.other { background: #f2f2f2; color: #333; border-bottom-left-radius: 4px; }
+        .bubble.user { background: #DB2777; color: #fff; border-bottom-right-radius: 4px; }
+        .bubble.system { background: #eef3fe; color: #6a7fa8; font-size: 12px; padding: 6px 14px; border-radius: 20px; }
+        .bubble .message-sender { font-size: 11px; font-weight: 600; color: #DB2777; margin-bottom: 2px; }
+        .message-time { font-size: 10px; color: #999; margin-top: 3px; padding: 0 4px; }
+        .message-row.user .message-time { text-align: right; }
+        .message-row.other .message-time { text-align: left; }
+        .date-divider { text-align: center; margin: 10px 0 8px 0; font-size: 12px; color: #888; }
+        .date-divider span { background: #e6e6e6; padding: 4px 12px; border-radius: 8px; color: #555; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .footer { position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: 100%; max-width: 400px; padding: 8px 12px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); background: #fff; border-top: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; z-index: 20; }
+        .footer input { flex: 1; border: none; background: #f5f5f5; border-radius: 24px; padding: 10px 16px; outline: none; font-size: 14px; color: #333; }
+        .footer input::placeholder { color: #999; }
+        .send-btn { background: #DB2777; border: none; border-radius: 50%; width: 42px; height: 42px; display: flex; justify-content: center; align-items: center; cursor: pointer; color: white; flex-shrink: 0; transition: background 0.2s; }
+        .send-btn:hover { background: #BE185D; }
+        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .send-btn svg { width: 20px; height: 20px; fill: white; }
+        .chat-image { max-width: 100%; max-height: 250px; border-radius: 12px; margin-bottom: 4px; cursor: pointer; }
+        .image-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 999; display: none; justify-content: center; align-items: center; flex-direction: column; }
+        .image-modal.show { display: flex; }
+        .image-modal img { max-width: 95%; max-height: 80%; object-fit: contain; }
+        .image-modal .close-btn { position: absolute; top: 40px; right: 20px; color: white; font-size: 28px; cursor: pointer; background: rgba(255,255,255,0.2); border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: none; }
+        .location-bubble { display: flex; flex-direction: column; gap: 2px; }
+        .location-icon { font-size: 20px; }
+        .location-coords { font-size: 11px; color: #999; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">
+            <span>💕 Fara</span>
+        </div>
+        <div class="header-actions">
+            <span class="header-user" id="userDisplay">User</span>
+            <span class="partner-status" id="partnerStatus">● Online</span>
+            <span class="material-symbols-outlined" onclick="logout()" title="Logout">logout</span>
+        </div>
+    </div>
+
+    <!-- Chat Area -->
+    <div class="chat-area" id="chatArea">
+        <div class="message-row system">
+            <div class="bubble system">💬 Selamat datang di Fara Chat 💕</div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <input type="text" id="userInput" placeholder="Ketik pesan..." autocomplete="off" />
+        <button class="send-btn" id="btnSend">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+    </div>
+</div>
+
+<!-- Image Modal -->
+<div class="image-modal" id="imageModal">
+    <button class="close-btn" onclick="closeImageModal()">✕</button>
+    <img id="modalImage" src="" alt="Full size" />
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<script>
+// ==========================================
+// --- FIREBASE CONFIG ---
+// ==========================================
+const firebaseConfig = {
+    apiKey: 'AIzaSyBvsdvBHxViIxObWEY7ssUXdPHEuLz3b-o',
+    authDomain: 'fara-2e838.firebaseapp.com',
+    databaseURL: 'https://fara-2e838-default-rtdb.asia-southeast1.firebasedatabase.app',
+    projectId: 'fara-2e838',
+    storageBucket: 'fara-2e838.firebasestorage.app',
+    messagingSenderId: '312061013821',
+    appId: '1:312061013821:web:fdf6d8c9559757ee181f54'
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const COUPLE_ID = 'fajar_rani';
+
+// ==========================================
+// --- STATE ---
+// ==========================================
+
+const userId = localStorage.getItem('fara_userId');
+const displayName = localStorage.getItem('fara_name') || userId;
+
+if (!userId) {
+    window.location.href = 'index.html';
+}
+
+const partnerId = userId === 'fajar' ? 'rani' : 'fajar';
+const partnerName = partnerId === 'fajar' ? 'Fajar' : 'Rani';
+
+// ==========================================
+// --- DOM ---
+// ==========================================
+
+const chatArea = document.getElementById('chatArea');
+const userInput = document.getElementById('userInput');
+const btnSend = document.getElementById('btnSend');
+const userDisplay = document.getElementById('userDisplay');
+const partnerStatus = document.getElementById('partnerStatus');
+
+userDisplay.textContent = displayName;
+
+// ==========================================
+// --- UTILITY ---
+// ==========================================
+
+function formatTime(timestamp) {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDateLabel(timestamp) {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    date.setHours(0,0,0,0);
+    today.setHours(0,0,0,0);
+    yesterday.setHours(0,0,0,0);
+    if (date.getTime() === today.getTime()) return "Hari Ini";
+    if (date.getTime() === yesterday.getTime()) return "Kemarin";
+    return date.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+// ==========================================
+// --- ADD MESSAGE ---
+// ==========================================
+
+function addMessageToUI(msg) {
+    const sender = msg.sender === userId ? 'user' : 'other';
+    const timestamp = msg.createdAt;
+    const dateLabel = formatDateLabel(timestamp);
+
+    const lastDivider = chatArea.querySelector('.date-divider:last-child');
+    const lastDate = lastDivider ? lastDivider.textContent : null;
+
+    if (lastDate !== dateLabel) {
+        const div = document.createElement('div');
+        div.className = 'date-divider';
+        div.innerHTML = `<span>${dateLabel}</span>`;
+        chatArea.appendChild(div);
+    }
+
+    const row = document.createElement('div');
+    row.className = `message-row ${sender}`;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'message-wrapper';
+
+    const bubble = document.createElement('div');
+    bubble.className = `bubble ${sender}`;
+
+    if (sender === 'other') {
+        const name = document.createElement('div');
+        name.className = 'message-sender';
+        name.textContent = msg.sender === 'fajar' ? 'Fajar' : 'Rani';
+        bubble.appendChild(name);
+    }
+
+    if (msg.type === 'image' && msg.imageUrl) {
+        const img = document.createElement('img');
+        img.src = msg.imageUrl;
+        img.className = 'chat-image';
+        img.onclick = () => openImageModal(msg.imageUrl);
+        bubble.appendChild(img);
+    } else if (msg.type === 'location') {
+        const locDiv = document.createElement('div');
+        locDiv.className = 'location-bubble';
+        locDiv.innerHTML = `
+            <span class="location-icon">📍</span>
+            <span>${msg.content || 'Lokasi saya'}</span>
+            <span class="location-coords">${msg.latitude?.toFixed(4)}, ${msg.longitude?.toFixed(4)}</span>
+            <a href="https://maps.google.com?q=${msg.latitude},${msg.longitude}" target="_blank" style="font-size:11px;color:#DB2777;">Lihat di Maps →</a>
+        `;
+        bubble.appendChild(locDiv);
+    } else {
+        const text = document.createElement('div');
+        text.textContent = msg.content || '';
+        bubble.appendChild(text);
+    }
+
+    const time = document.createElement('div');
+    time.className = 'message-time';
+    time.textContent = formatTime(timestamp);
+
+    wrapper.appendChild(bubble);
+    wrapper.appendChild(time);
+    row.appendChild(wrapper);
+    chatArea.appendChild(row);
+
+    chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+// ==========================================
+// --- SEND MESSAGE ---
+// ==========================================
+
+async function sendMessage() {
+    const text = userInput.value.trim();
+    if (!text) return;
+
+    userInput.value = '';
+    btnSend.disabled = true;
+
+    try {
+        const ref = db.collection('messages').doc(COUPLE_ID).collection('chats');
+        await ref.add({
+            sender: userId,
+            type: 'text',
+            content: text,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    } catch (error) {
+        console.error('Gagal kirim:', error);
+    }
+
+    btnSend.disabled = false;
+}
+
+// ==========================================
+// --- LISTEN MESSAGES ---
+// ==========================================
+
+function listenMessages() {
+    const ref = db.collection('messages').doc(COUPLE_ID).collection('chats');
+    const q = ref.orderBy('createdAt', 'asc').limit(200);
+
+    q.onSnapshot((snap) => {
+        const systemMsgs = chatArea.querySelectorAll('.message-row.system');
+        chatArea.innerHTML = '';
+        systemMsgs.forEach(el => chatArea.appendChild(el));
+
+        let lastDate = null;
+
+        snap.forEach(doc => {
+            const msg = { id: doc.id, ...doc.data() };
+            const dateLabel = formatDateLabel(msg.createdAt);
+
+            if (lastDate !== dateLabel && dateLabel) {
+                const div = document.createElement('div');
+                div.className = 'date-divider';
+                div.innerHTML = `<span>${dateLabel}</span>`;
+                chatArea.appendChild(div);
+                lastDate = dateLabel;
+            }
+
+            addMessageToUI(msg);
+        });
+
+        chatArea.scrollTop = chatArea.scrollHeight;
+    });
+}
+
+// ==========================================
+// --- MARK READ ---
+// ==========================================
+
+async function markMessagesRead() {
+    try {
+        const ref = db.collection('messages').doc(COUPLE_ID).collection('chats');
+        const snap = await ref.where('sender', '!=', userId).where('read', '==', false).get();
+        snap.forEach(doc => doc.ref.update({ read: true }));
+    } catch (error) {
+        console.error('Mark read error:', error);
+    }
+}
+
+// ==========================================
+// --- PARTNER STATUS ---
+// ==========================================
+
+function listenPartnerStatus() {
+    db.collection('users').doc(partnerId).onSnapshot((snap) => {
+        if (snap.exists) {
+            const data = snap.data();
+            if (data.isOnline) {
+                partnerStatus.textContent = '● Online';
+                partnerStatus.className = 'partner-status online';
+            } else {
+                partnerStatus.textContent = '○ Offline';
+                partnerStatus.className = 'partner-status offline';
+            }
+        }
+    });
+}
+
+// ==========================================
+// --- ONLINE STATUS ---
+// ==========================================
+
+function setOnlineStatus(isOnline) {
+    db.collection('users').doc(userId).update({
+        isOnline: isOnline,
+        lastSeen: new Date().toISOString()
+    }).catch(() => {});
+}
+
+// ==========================================
+// --- LOGOUT ---
+// ==========================================
+
+function logout() {
+    if (confirm('Yakin ingin logout?')) {
+        setOnlineStatus(false);
+        localStorage.removeItem('fara_userId');
+        localStorage.removeItem('fara_name');
+        window.location.href = 'index.html';
+    }
+}
+window.logout = logout;
+
+// ==========================================
+// --- IMAGE MODAL ---
+// ==========================================
+
+function openImageModal(url) {
+    const modal = document.getElementById('imageModal');
+    const img = document.getElementById('modalImage');
+    img.src = url;
+    modal.classList.add('show');
+}
+window.openImageModal = openImageModal;
+
+function closeImageModal() {
+    document.getElementById('imageModal').classList.remove('show');
+}
+window.closeImageModal = closeImageModal;
+
+document.getElementById('imageModal').addEventListener('click', function(e) {
+    if (e.target === this) closeImageModal();
+});
+
+// ==========================================
+// --- INIT ---
+// ==========================================
+
+setOnlineStatus(true);
+listenMessages();
+listenPartnerStatus();
+markMessagesRead();
+
+window.addEventListener('beforeunload', () => {
+    setOnlineStatus(false);
+});
+
+// ==========================================
+// --- EVENTS ---
+// ==========================================
+
+btnSend.addEventListener('click', sendMessage);
+userInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+});
+
+console.log(`💕 Fara Chat siap! Login sebagai: ${displayName}`);
+</script>
+
+</body>
+</html>
