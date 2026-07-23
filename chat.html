@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Fara Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
+        body { background: #f2f2f2; display: flex; justify-content: center; align-items: center; height: 100dvh; overflow: hidden; }
+
+        .chat-container {
+            width: 100%; max-width: 400px; height: 100dvh;
+            background: #ffffff;
+            display: flex; flex-direction: column;
+            position: relative; overflow: hidden;
+        }
+
+        /* HEADER */
+        .header {
+            position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+            width: 100%; max-width: 400px;
+            padding: 10px 16px;
+            display: flex; align-items: center; justify-content: space-between;
+            background: #ffffff;
+            border-bottom: 1px solid #f0f0f0;
+            z-index: 30; height: 64px;
+        }
+
+        .header-left { display: flex; align-items: center; gap: 10px; }
+        .header-left .logo { font-weight: 700; font-size: 17px; }
+        .header-left .logo span:first-child { color: #0028B3; }
+        .header-left .logo span:last-child { color: #1a2236; }
+
+        .status-container { display: flex; align-items: center; gap: 6px; margin-left: 4px; }
+        .status-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            display: inline-block;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        .status-dot.online {
+            background: #22c55e;
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+            animation: pulse-green 2s infinite;
+        }
+        .status-dot.offline { background: #9ca3af; }
+
+        .status-text { font-size: 11px; font-weight: 600; transition: color 0.3s ease; }
+        .status-text.online { color: #22c55e; }
+        .status-text.offline { color: #9ca3af; }
+
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
+            70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        .header-right { display: flex; align-items: center; gap: 14px; }
+        .header-right .user-name { font-size: 13px; color: #6a7fa8; font-weight: 600; }
+        .header-right .material-symbols-outlined {
+            font-size: 22px; color: #6a7fa8; cursor: pointer;
+            transition: color 0.2s;
+        }
+        .header-right .material-symbols-outlined:hover { color: #0028B3; }
+
+        /* CHAT AREA */
+        .chat-area {
+            flex: 1;
+            padding: 16px;
+            padding-top: 80px;
+            padding-bottom: 90px;
+            overflow-y: auto;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .chat-area::-webkit-scrollbar { width: 4px; }
+        .chat-area::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+
+        .date-divider {
+            text-align: center;
+            margin: 12px 0 10px 0;
+            font-size: 12px;
+            color: #888;
+        }
+        .date-divider span {
+            background: #e6e6e6;
+            padding: 4px 14px;
+            border-radius: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .message-row { display: flex; width: 100%; animation: fadeIn 0.25s ease; }
+        .message-row.user { justify-content: flex-end; }
+        .message-row.other { justify-content: flex-start; }
+        .message-row.system { justify-content: center; }
+
+        .message-wrapper { max-width: 82%; display: flex; flex-direction: column; }
+        .message-row.user .message-wrapper { align-items: flex-end; }
+        .message-row.other .message-wrapper { align-items: flex-start; }
+
+        .bubble {
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.5;
+            word-wrap: break-word;
+            position: relative;
+        }
+        .bubble.other {
+            background: #f2f2f2;
+            color: #1a2236;
+            border-bottom-left-radius: 4px;
+        }
+        .bubble.user {
+            background: #0028B3;
+            color: #ffffff;
+            border-bottom-right-radius: 4px;
+        }
+        .bubble.system {
+            background: #eef3fe;
+            color: #6a7fa8;
+            font-size: 12px;
+            padding: 6px 16px;
+            border-radius: 20px;
+        }
+
+        .bubble .sender-name {
+            font-size: 11px;
+            font-weight: 700;
+            color: #0028B3;
+            margin-bottom: 2px;
+        }
+        .message-row.other .sender-name { color: #0028B3; }
+
+        .message-time {
+            font-size: 10px;
+            color: #999;
+            margin-top: 3px;
+            padding: 0 4px;
+        }
+        .message-row.user .message-time { text-align: right; }
+        .message-row.other .message-time { text-align: left; }
+
+        /* CHAT IMAGE - Tanpa source info */
+        .chat-image-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        .chat-image {
+            max-width: 200px;
+            max-height: 240px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: block;
+        }
+        .chat-image-caption {
+            margin-top: 4px;
+            font-size: 13px;
+        }
+
+        /* Tombol hapus gambar (hover) */
+        .chat-image-wrapper .delete-img-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 26px;
+            height: 26px;
+            font-size: 13px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            backdrop-filter: blur(4px);
+            z-index: 5;
+        }
+        .chat-image-wrapper:hover .delete-img-btn {
+            display: flex;
+        }
+        .chat-image-wrapper .delete-img-btn:hover {
+            background: rgba(220, 38, 38, 0.9);
+        }
+
+        .location-bubble { display: flex; flex-direction: column; gap: 2px; }
+        .location-icon { font-size: 20px; }
+        .location-coords { font-size: 11px; color: #999; font-weight: 600; }
+        .location-link { font-size: 11px; color: #0028B3; text-decoration: none; font-weight: 600; }
+
+        /* FOOTER */
+        .footer {
+            position: fixed; left: 50%; transform: translateX(-50%);
+            bottom: 0;
+            width: 100%; max-width: 400px;
+            padding: 8px 14px;
+            padding-bottom: calc(8px + env(safe-area-inset-bottom));
+            background: #ffffff;
+            border-top: 1px solid #f0f0f0;
+            display: flex; align-items: center; gap: 6px;
+            z-index: 20;
+        }
+        .footer input {
+            flex: 1;
+            border: none;
+            background: #f5f5f5;
+            border-radius: 24px;
+            padding: 10px 16px;
+            outline: none;
+            font-size: 14px;
+            color: #1a2236;
+        }
+        .footer input::placeholder { color: #999; }
+
+        .btn-icon {
+            background: transparent;
+            border: none;
+            border-radius: 50%;
+            width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+            flex-shrink: 0;
+            color: #6a7fa8;
+            font-size: 22px;
+        }
+        .btn-icon:hover { background: #f0f4fe; color: #0028B3; }
+        .btn-icon:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .send-btn {
+            background: #0028B3;
+            border: none;
+            border-radius: 50%;
+            width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .send-btn:hover { background: #1557b0; }
+        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .send-btn svg { width: 20px; height: 20px; fill: white; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .image-modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+            z-index: 999; display: none;
+            justify-content: center; align-items: center;
+            flex-direction: column;
+        }
+        .image-modal.show { display: flex; }
+        .image-modal img { max-width: 95%; max-height: 80%; object-fit: contain; }
+        .image-modal .close-btn {
+            position: absolute; top: 40px; right: 20px;
+            color: white; font-size: 26px; cursor: pointer;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%; width: 44px; height: 44px;
+            display: flex; align-items: center; justify-content: center;
+            border: none;
+            transition: background 0.2s;
+        }
+        .image-modal .close-btn:hover { background: rgba(255,255,255,0.25); }
+
+        .uploading-indicator {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 14px;
+            background: #f2f2f2;
+            border-radius: 18px;
+            font-size: 13px;
+            color: #6a7fa8;
+        }
+        .uploading-spinner {
+            width: 18px; height: 18px;
+            border: 2px solid #d6e0f5;
+            border-top-color: #0028B3;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #fileInput { display: none; }
+
+        /* Encryption badge (tidak dipakai tapi tetap ada) */
+        .encryption-badge {
+            font-size: 10px;
+            color: #6a7fa8;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            background: #f0f4fe;
+            border-radius: 12px;
+            margin-top: 2px;
+        }
+        .encryption-badge .lock-icon { font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-left">
+            <div class="logo">
+                <span>My</span><span>Saku</span>
+            </div>
+            <div class="status-container">
+                <span class="status-dot" id="partnerDot"></span>
+                <span class="status-text" id="partnerStatusText">● Online</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <span class="user-name" id="userDisplay">User</span>
+            <span class="material-symbols-outlined" onclick="logout()" title="Logout">logout</span>
+        </div>
+    </div>
+
+    <!-- CHAT AREA -->
+    <div class="chat-area" id="chatArea">
+        <div class="message-row system">
+            <div class="bubble system">💕 Selamat datang di Fara Chat</div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <button class="btn-icon" id="btnImage" title="Kirim Foto">
+            <span class="material-symbols-outlined">image</span>
+        </button>
+        <input type="text" id="userInput" placeholder="Ketik pesan..." autocomplete="off" />
+        <button class="send-btn" id="btnSend">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+    </div>
+
+    <input type="file" id="fileInput" accept="image/*" />
+
+    <div class="image-modal" id="imageModal">
+        <button class="close-btn" onclick="closeImageModal()">✕</button>
+        <img id="modalImage" src="" alt="Full size" />
+    </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<script>
+// ==========================================
+// --- FIREBASE CONFIG ---
+// ==========================================
+const firebaseConfig = {
+    apiKey: 'AIzaSyBvsdvBHxViIxObWEY7ssUXdPHEuLz3b-o',
+    authDomain: 'fara-2e838.firebaseapp.com',
+    databaseURL: 'https://fara-2e838-default-rtdb.asia-southeast1.firebasedatabase.app',
+    projectId: 'fara-2e838',
+    storageBucket: 'fara-2e838.firebasestorage.app',
+    messagingSenderId: '312061013821',
+    appId: '1:312061013821:web:fdf6d8c9559757ee181f54'
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ==========================================
+// --- CLOUDINARY CONFIG ---
+// ==========================================
+const CLOUDINARY_CLOUD_NAME = 'dxijmjoe1';
+const CLOUDINARY_UPLOAD_PRESET = 'fara_unsigned';
+
+// ==========================================
+// --- STATE ---
+// ==========================================
+
+const userId = localStorage.getItem('fara_userId');
+const displayName = localStorage.getItem('fara_name') || userId;
+
+if (!userId) {
+    window.location.href = 'index.html';
+}
+
+const partnerId = userId === 'fajar' ? 'rani' : 'fajar';
+const partnerDisplayName = partnerId === 'fajar' ? 'Fajar' : 'Rani';
+const COUPLE_ID = 'fajar_rani';
+
+// ==========================================
+// --- DOM ---
+// ==========================================
+
+const chatArea = document.getElementById('chatArea');
+const userInput = document.getElementById('userInput');
+const btnSend = document.getElementById('btnSend');
+const btnImage = document.getElementById('btnImage');
+const fileInput = document.getElementById('fileInput');
+const userDisplay = document.getElementById('userDisplay');
+const partnerDot = document.getElementById('partnerDot');
+const partnerStatusText = document.getElementById('partnerStatusText');
+
+userDisplay.textContent = displayName;
+
+// ==========================================
+// --- UTILITY ---
+// ==========================================
+
+function formatTime(timestamp) {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDateLabel(timestamp) {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    date.setHours(0,0,0,0);
+    today.setHours(0,0,0,0);
+    yesterday.setHours(0,0,0,0);
+    if (date.getTime() === today.getTime()) return "Hari Ini";
+    if (date.getTime() === yesterday.getTime()) return "Kemarin";
+    return date.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+// ==========================================
+// --- UPLOAD IMAGE ---
+// ==========================================
+
+async function uploadImage(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    formData.append('folder', 'fara_chat');
+
+    const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: 'POST', body: formData }
+    );
+
+    const data = await response.json();
+    if (data.secure_url) {
+        return { success: true, url: data.secure_url };
+    } else {
+        throw new Error(data.error?.message || 'Upload gagal');
+    }
+}
+
+// ==========================================
+// --- HAPUS GAMBAR ---
+// ==========================================
+
+async function deleteImageMessage(messageId) {
+    try {
+        const ref = db.collection('messages').doc(COUPLE_ID).collection('chats');
+        await ref.doc(messageId).delete();
+        console.log('🗑️ Gambar dihapus:', messageId);
+        return true;
+    } catch (error) {
+        console.error('Gagal hapus gambar:', error);
+        return false;
+    }
+}
+
+// ==========================================
+// --- ADD MESSAGE (TANPA ENKRIPSI) ---
+// ==========================================
+
+function addMessageToUI(msg) {
+    const sender = msg.sender === userId ? 'user' : 'other';
+    const timestamp = msg.createdAt;
+    const dateLabel = formatDateLabel(timestamp);
+
+    // Date divider
+    const lastDivider = chatArea.querySelector('.date-divider:last-child');
+    const lastDate = lastDivider ? lastDivider.textContent : null;
+
+    if (lastDate !== dateLabel) {
+        const div = document.createElement('div');
+        div.className = 'date-divider';
+        div.innerHTML = `<span>${dateLabel}</span>`;
+        chatArea.appendChild(div);
+    }
+
+    const row = document.createElement('div');
+    row.className = `message-row ${sender}`;
+    row.dataset.messageId = msg.id;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'message-wrapper';
+
+    const bubble = document.createElement('div');
+    bubble.className = `bubble ${sender}`;
+
+    if (sender === 'other') {
+        const name = document.createElement('div');
+        name.className = 'sender-name';
+        name.textContent = msg.sender === 'fajar' ? 'Fajar' : 'Rani';
+        bubble.appendChild(name);
+    }
+
+    // --- GAMBAR (tanpa source info) ---
+    if (msg.type === 'image' && msg.imageUrl) {
+        const wrapperImg = document.createElement('div');
+        wrapperImg.className = 'chat-image-wrapper';
+
+        const img = document.createElement('img');
+        img.src = msg.imageUrl;
+        img.className = 'chat-image';
+        img.loading = 'lazy';
+        img.alt = 'Gambar';
+        img.onclick = () => openImageModal(msg.imageUrl);
+
+        // Tombol hapus (hanya untuk user sendiri)
+        if (sender === 'user') {
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-img-btn';
+            deleteBtn.innerHTML = '✕';
+            deleteBtn.title = 'Hapus gambar';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (confirm('Hapus gambar ini?')) {
+                    deleteImageMessage(msg.id).then(() => {
+                        row.remove();
+                    });
+                }
+            };
+            wrapperImg.appendChild(deleteBtn);
+        }
+
+        wrapperImg.appendChild(img);
+        bubble.appendChild(wrapperImg);
+
+        if (msg.content) {
+            const caption = document.createElement('div');
+            caption.className = 'chat-image-caption';
+            caption.textContent = msg.content;
+            bubble.appendChild(caption);
+        }
+
+    // --- LOKASI ---
+    } else if (msg.type === 'location') {
+        const locDiv = document.createElement('div');
+        locDiv.className = 'location-bubble';
+        locDiv.innerHTML = `
+            <span class="location-icon">📍</span>
+            <span>${msg.content || 'Lokasi saya'}</span>
+            <span class="location-coords">${msg.latitude?.toFixed(4)}, ${msg.longitude?.toFixed(4)}</span>
+            <a href="https://maps.google.com?q=${msg.latitude},${msg.longitude}" target="_blank" class="location-link">Lihat di Maps →</a>
+        `;
+        bubble.appendChild(locDiv);
+
+    // --- TEKS ---
+    } else {
+        const text = document.createElement('div');
+        text.textContent = msg.content || '';
+        bubble.appendChild(text);
+    }
+
+    // Waktu
+    const time = document.createElement('div');
+    time.className = 'message-time';
+    time.textContent = formatTime(timestamp);
+
+    wrapper.appendChild(bubble);
+    wrapper.appendChild(time);
+    row.appendChild(wrapper);
+    chatArea.appendChild(row);
+    chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+// ==========================================
+// --- SEND MESSAGE (TANPA ENKRIPSI) ---
+// ==========================================
+
+async function sendMessageToFirestore(text, type = 'text', imageUrl = null) {
+    const messageData = {
+        sender: userId,
+        type: type,
+        content: text || '',
+        read: false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    if (imageUrl) {
+        messageData.imageUrl = imageUrl;
+    }
+
+    const ref = db.collection('messages').doc(COUPLE_ID).collection('chats');
+    const docRef = await ref.add(messageData);
+    return docRef.id;
+}
+
+// ==========================================
+// --- SEND TEXT ---
+// ==========================================
+
+async function sendText() {
+    const text = userInput.value.trim();
+    if (!text) return;
+
+    userInput.value = '';
+    btnSend.disabled = true;
+
+    try {
+        await sendMessageToFirestore(text, 'text');
+    } catch (error) {
+        console.error('Gagal kirim:', error);
+        alert('Gagal kirim pesan. Cek console untuk detail.');
+    }
+
+    btnSend.disabled = false;
+}
+
+// ==========================================
+// --- SEND IMAGE ---
+// ==========================================
+
+async function handleImageUpload(file) {
+    if (!file) return;
+
+    btnImage.disabled = true;
+    btnSend.disabled = true;
+
+    // Tampilkan loading
+    const loadingRow = document.createElement('div');
+    loadingRow.className = 'message-row system';
+    loadingRow.id = 'uploading-indicator';
+    loadingRow.innerHTML = `
+        <div class="uploading-indicator">
+            <div class="uploading-spinner"></div>
+            Mengupload foto...
+        </div>
+    `;
+    chatArea.appendChild(loadingRow);
+    chatArea.scrollTop = chatArea.scrollHeight;
+
+    try {
+        const result = await uploadImage(file);
+
+        const loadingEl = document.getElementById('uploading-indicator');
+        if (loadingEl) loadingEl.remove();
+
+        if (result.success) {
+            const caption = userInput.value.trim();
+            userInput.value = '';
+            await sendMessageToFirestore(caption, 'image', result.url);
+        } else {
+            throw new Error('Upload gagal');
+        }
+    } catch (error) {
+        const loadingEl = document.getElementById('uploading-indicator');
+        if (loadingEl) loadingEl.remove();
+
+        const errorRow = document.createElement('div');
+        errorRow.className = 'message-row system';
+        errorRow.innerHTML = `<div class="bubble system">❌ Gagal upload foto: ${error.message}</div>`;
+        chatArea.appendChild(errorRow);
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    btnImage.disabled = false;
+    btnSend.disabled = false;
+    fileInput.value = '';
+}
+
+// ==========================================
+// --- LISTEN MESSAGES ---
+// ==========================================
+
+function listenMessages() {
+    const ref = db.collection('messages').doc(COUPLE_ID).collection('chats');
+    const q = ref.orderBy('createdAt', 'asc').limit(200);
+
+    q.onSnapshot((snap) => {
+        const systemMsgs = chatArea.querySelectorAll('.message-row.system');
+        chatArea.innerHTML = '';
+        systemMsgs.forEach(el => chatArea.appendChild(el));
+
+        let lastDate = null;
+
+        snap.forEach(doc => {
+            const msg = { id: doc.id, ...doc.data() };
+            const dateLabel = formatDateLabel(msg.createdAt);
+
+            if (lastDate !== dateLabel && dateLabel) {
+                const div = document.createElement('div');
+                div.className = 'date-divider';
+                div.innerHTML = `<span>${dateLabel}</span>`;
+                chatArea.appendChild(div);
+                lastDate = dateLabel;
+            }
+
+            addMessageToUI(msg);
+        });
+
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }, (error) => {
+        console.error('Firestore error:', error);
+    });
+}
+
+// ==========================================
+// --- MARK READ ---
+// ==========================================
+
+async function markMessagesRead() {
+    try {
+        const ref = db.collection('messages').doc(COUPLE_ID).collection('chats');
+        const snap = await ref.where('sender', '!=', userId).where('read', '==', false).get();
+        snap.forEach(doc => doc.ref.update({ read: true }));
+    } catch (error) {
+        console.error('Mark read error:', error);
+    }
+}
+
+// ==========================================
+// --- STATUS ONLINE ---
+// ==========================================
+
+function updatePartnerStatus(isOnline) {
+    partnerDot.className = 'status-dot ' + (isOnline ? 'online' : 'offline');
+    partnerStatusText.className = 'status-text ' + (isOnline ? 'online' : 'offline');
+    partnerStatusText.textContent = isOnline ? `● ${partnerDisplayName} online` : `○ ${partnerDisplayName} offline`;
+}
+
+function listenPartnerStatus() {
+    db.collection('users').doc(partnerId).onSnapshot((snap) => {
+        if (snap.exists) {
+            const data = snap.data();
+            updatePartnerStatus(data.isOnline || false);
+        }
+    });
+}
+
+function setOnlineStatus(isOnline) {
+    db.collection('users').doc(userId).update({
+        isOnline: isOnline,
+        lastSeen: new Date().toISOString()
+    }).catch(() => {});
+}
+
+// ==========================================
+// --- LOGOUT ---
+// ==========================================
+
+function logout() {
+    if (confirm('Yakin ingin logout?')) {
+        setOnlineStatus(false);
+        localStorage.removeItem('fara_userId');
+        localStorage.removeItem('fara_name');
+        window.location.href = 'index.html';
+    }
+}
+window.logout = logout;
+
+// ==========================================
+// --- IMAGE MODAL ---
+// ==========================================
+
+function openImageModal(url) {
+    document.getElementById('modalImage').src = url;
+    document.getElementById('imageModal').classList.add('show');
+}
+window.openImageModal = openImageModal;
+
+function closeImageModal() {
+    document.getElementById('imageModal').classList.remove('show');
+}
+window.closeImageModal = closeImageModal;
+
+document.getElementById('imageModal').addEventListener('click', function(e) {
+    if (e.target === this) closeImageModal();
+});
+
+// ==========================================
+// --- INIT ---
+// ==========================================
+
+setOnlineStatus(true);
+listenMessages();
+listenPartnerStatus();
+markMessagesRead();
+
+window.addEventListener('beforeunload', () => {
+    setOnlineStatus(false);
+});
+
+// ==========================================
+// --- EVENTS ---
+// ==========================================
+
+btnSend.addEventListener('click', sendText);
+userInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendText();
+});
+
+btnImage.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => {
+    if (e.target.files && e.target.files[0]) {
+        handleImageUpload(e.target.files[0]);
+    }
+});
+
+console.log(`💕 Fara Chat siap! Login sebagai: ${displayName}`);
+console.log('📷 Kirim foto dengan klik tombol gambar');
+console.log('🗑️ Hapus gambar dengan hover → klik ✕ (hanya untuk pengirim)');
+</script>
+
+</body>
+</html>
